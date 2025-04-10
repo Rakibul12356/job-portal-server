@@ -34,7 +34,12 @@ async function run() {
     const jobsCollection = client.db('job-portal').collection('jobs')
     const jobApplicationCollection = client.db('job-portal').collection('jobs_applications')
     app.get('/jobs',async(req,res)=>{
-      const cursor = jobsCollection.find();
+      const email = req.query.email;
+      let query= {};
+      if(email){
+        query={hr_email:email}
+      }
+      const cursor = jobsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result)
     })
@@ -68,10 +73,20 @@ async function run() {
       }
       res.send(result)
     })
+
+    app.get('/job-applications/jobs/:job_id', async(req,res)=>{
+      const JobId= req.params.job_id;
+      const query={job_id: JobId};
+      const result= await jobApplicationCollection.find(query).toArray();
+      console.log(result)
+      res.send(result)
+    })
+
     //job application apis
     app.post('/job-applications',async(req,res)=>{
       const application = req.body;
       const result=await jobApplicationCollection.insertOne(application);
+      console.log(application)
       res.send(result)
     })
 
