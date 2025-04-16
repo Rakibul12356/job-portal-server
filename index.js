@@ -3,13 +3,15 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 const app= express();
+const jwt = require('jsonwebtoken') 
+const cookieParser = require('cookie-parser');
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 //VZ29RsT4Qr6XSJnC
 //
 app.use(cors())
 app.use(express.json())
-
+app.use(cookieParser())
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.j9djoaf.mongodb.net/?appName=Cluster0`;
 
@@ -21,7 +23,6 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -29,7 +30,17 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    //Auth related ais
+    app.post('/jwt', async (req,res)=>{
+      const user = req.body;
+      const token = jwt.sign(user,process.env.JWT_SECRET ,{ expiresIn:'3h'}) 
+      res.cookie('token',token,{
+        httpOnly: true,
+        secure:false,//set true in production with HTTPS
 
+      })
+      res.send({success:true})
+    })
     //jobs related apis
     const jobsCollection = client.db('job-portal').collection('jobs')
     const jobApplicationCollection = client.db('job-portal').collection('jobs_applications')
@@ -87,6 +98,19 @@ async function run() {
       const application = req.body;
       const result=await jobApplicationCollection.insertOne(application);
       console.log(application)
+      res.send(result)
+    })
+
+    app.patch('/job-applications/:id',async(req,res)=>{
+      const id=req.params.id;
+      const data = req.body;
+      const filter={ _id:new ObjectId(id)};
+      const updateDoc = {
+        $set:{
+          status:data.status
+        }
+      }
+      const result = await jobApplicationCollection.updateOne(filter,updateDoc);
       res.send(result)
     })
 
